@@ -1,0 +1,29 @@
+version: "3"  # Docker Compose file version
+
+services:
+  rest:  # Service for the "rest" component
+    image: exam-gse-2324:1  # Uses the specified image with Tag "1"
+    environment:
+      - NODE_ENV=production  # Configures the NODE_ENV environment variable to "production"
+    ports:
+      - "3030:3030"  # Maps host port 3030 to container port 3030
+    networks:
+      - exam-gse-2324  # Connects to the network named "exam-gse-2324"
+    depends_on:
+      - data  # This service depends on the "data" service
+
+  data:  # Service for the "data" component (MongoDB)
+    image: mongo:5  # Uses the "mongo" image with label "5"
+    ports:
+      - "3031:27017"  # Maps host port 3031 to container port 27017
+    networks:
+      - exam-gse-2324  # Connects to the network named "exam-gse-2324"
+    volumes:
+      - db:/data/db  # Mounts a volume named "db" for data persistence
+
+networks:
+  exam-gse-2324:  # Defines the network "exam-gse-2324"
+    external: true  # Assumes that this network has already been created externally
+
+volumes:
+  db:  # Defines a volume named "db" for storing MongoDB data
