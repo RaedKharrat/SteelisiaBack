@@ -14,16 +14,23 @@ const JWT_SECRET = crypto.randomBytes(32).toString('hex');
 // Login function
 export const login = async function (req, res, next) {
     try {
-        const user = await User.findOne({ email: req.body.email });
+        // Convert the email to lowercase before querying
+        const email = req.body.email.toLowerCase();
+        
+        // Find user by email
+        const user = await User.findOne({ email });
+        
         if (!user) {
             return res.status(401).json({ message: 'User is not registered' });
         }
 
+        // Verify the password
         const valid = await bcrypt.compare(req.body.password, user.password);
         if (!valid) {
             return res.status(401).json({ message: 'Password incorrect' });
         }
 
+        // Set token expiry and create token
         const maxAge = 1 * 60 * 60;
         const token = jwt.sign(
             { userId: user._id, role: user.role, numTel: user.numTel },
@@ -31,12 +38,14 @@ export const login = async function (req, res, next) {
             { expiresIn: maxAge }
         );
 
+        // Set the cookie with the JWT
         res.cookie("jwt", token, {
             httpOnly: true,
             maxAge: maxAge * 1000,
             secure: true,
         });
 
+        // Respond with success message and token
         res.status(200).json({
             userId: user._id,
             message: "User successfully logged in",
@@ -48,37 +57,41 @@ export const login = async function (req, res, next) {
     }
 };
 
-// Register function
-export const Register = async function (req, res, next) {
-    try {
-        const hash = await bcrypt.hash(req.body.password, 10);
 
-        const existingUser = await User.findOne({
-            numTel: req.body.numTel,
-        });
+// Register function
+export const Register = async (req, res) => {
+    try {
+        console.log('Incoming signup request:', req.body); // Log the request body
+
+        // Hash the password before saving it
+        const hash = await bcrypt.hash(req.body.password, 10);
+        
+        // Check if the user already exists
+        const existingUser = await User.findOne({ email: req.body.email });
         if (existingUser) {
             return res.status(400).json({ message: "It seems you already have an account, please log in instead." });
         }
 
+        // Create a new user
         const user = new User({
-            username: req.body.username,
             email: req.body.email,
             password: hash,
             first_name: req.body.first_name,
             last_name: req.body.last_name,
             phone: req.body.phone,
             adresse: req.body.adresse,
-            image: req.file.filename,
-            role: req.body.role
+            role: req.body.role || 'Client' // Default role if not provided
         });
 
+        // Save the user to the database
         await user.save();
-        return res.status(200).json({ message: 'User created' });
+        return res.status(200).json({ message: 'User created successfully' });
     } catch (error) {
         console.error('Error in Register:', error);
         return res.status(500).json({ error: error.message });
     }
 };
+
 
 // Forget Password function (OTP generation)
 export const forgetPassword = async function (req, res, next) {

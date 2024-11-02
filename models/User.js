@@ -34,12 +34,12 @@ const UserSchema = new Schema({
     },
     image: {
         type: String,
-        required: true
+        required: false
     },
     role: {
         type: String,
         enum: ['Admin', 'Client', 'Company Owner'], 
-        required: true
+        required: false
     }
 }, {
     timestamps: true  // Corrected timestamps option

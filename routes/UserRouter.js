@@ -23,7 +23,6 @@ router.post('/signup', multer, [
     body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
     body('first_name').notEmpty().withMessage('First name is required'),
     body('last_name').notEmpty().withMessage('Last name is required'),
-    body('role').notEmpty().withMessage('Role is required') // Assuming role is also required
 ], validateRequest, Register);
 
 // Login route
