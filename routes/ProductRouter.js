@@ -8,8 +8,8 @@ const router = express.Router();
 // Handling routes for the '/product' endpoint
 router.route('/')
     .get(getAll)
-    .post(multer,[body('name').notEmpty().withMessage('Name is required'),], addOnce);
-
+    .post(
+        multer,addOnce);
 
 // Handling routes for the '/product/:id' endpoint
 router.route('/:id')

@@ -8,6 +8,11 @@ export function addOnce(req, res) {
         return res.status(400).json({ errors: errors.array() });
     }
 
+    // Check if the images files were uploaded
+    if (!req.files || req.files.length === 0) {
+        return res.status(400).json({ error: "At least one image file is required" });
+    }
+
     // Prepare the product data for creation
     const productData = {
         name: req.body.name,
@@ -15,7 +20,7 @@ export function addOnce(req, res) {
         prix: req.body.prix,
         etat: req.body.etat,
         qnt: req.body.qnt,
-        image: req.file ? req.file.filename : null, 
+        images: req.files.map(file => file.filename), // Map filenames from the uploaded files
         idCategorie: req.body.idCategorie,
     };
 
@@ -35,15 +40,20 @@ export function updateOnce(req, res) {
         return res.status(400).json({ errors: errors.array() });
     }
 
+    // Prepare the update data
     const updateData = {
         name: req.body.name,
         description: req.body.description,
         prix: req.body.prix,
         etat: req.body.etat,
         qnt: req.body.qnt,
-        image: req.file ? req.file.filename : null, // Check if image is provided
         idCategorie: req.body.idCategorie,
     };
+
+    // Handle the images if provided
+    if (req.files && req.files.length > 0) {
+        updateData.images = req.files.map(file => file.filename); // Update images with new filenames
+    }
 
     Product.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true })
         .then((updatedProduct) => {

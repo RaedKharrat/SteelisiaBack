@@ -6,20 +6,20 @@ const otpSchema = new Schema(
     {
         userId: {
             type: String,
-            required: true, // Add required if necessary
+            required: true, // Required field for user ID
         },
         otp: {
             type: String,
-            required: true, // Add required if necessary
+            required: true, // Required field for OTP
         },
         expires: {
             type: Date,
-            default: Date.now,
-            expires: '30m', // Expire after 1500 seconds
+            default: Date.now, // This will be set to the current date/time by default
+            expires: '30m', // This specifies the document should expire 30 minutes after creation
         },
     },
     {
-        timestamps: true, // This will add createdAt and updatedAt timestamps
+        timestamps: true, // Automatically adds createdAt and updatedAt fields
     }
 );
 

@@ -5,38 +5,36 @@ const { Schema, model } = mongoose;
 const productSchema = new Schema({
     name: {
         type: String,
-        required: true
+        required: true,
     },
     description: {
         type: String,
-        required: true
+        required: true,
     },
     prix: {
-        type: Number, 
-        required: true
+        type: Number,
+        required: true,
     },
     etat: {
         type: String,
-        enum: ['disponible', 'non disponible', 'coming soon'], 
-        required: true
+        enum: ['disponible', 'non disponible', 'coming soon'],
+        required: true,
     },
     qnt: {
         type: String,
-        required: true
+        required: true,
     },
-    image: {
+    images: [{ // Change to an array for multiple images
         type: String,
-        required: true
-    },
+        required: true,
+    }],
     idCategorie: {
-        type: Schema.Types.ObjectId, 
-        ref: 'Categorie', 
-        required: false 
+        type: Schema.Types.ObjectId,
+        ref: 'Categorie',
+        required: false,
     },
-},
-
-{
-    timestamps: true
+}, {
+    timestamps: true,
 });
 
 // Creating and exporting the 'Product' model using the defined schema

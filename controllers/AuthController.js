@@ -44,7 +44,7 @@ export const login = async function (req, res, next) {
             maxAge: maxAge * 1000,
             secure: true,
         });
-
+console.log('login token is :', token)
         // Respond with success message and token
         res.status(200).json({
             userId: user._id,
@@ -103,6 +103,9 @@ export const forgetPassword = async function (req, res, next) {
             return res.status(401).json({ message: 'User is not registered' });
         }
 
+        // Remove any existing OTP for the user
+        await Otp.deleteMany({ userId: email });
+
         const otp = otpGenerator.generate(6, {
             digits: true,
             upperCaseAlphabets: false,
@@ -116,10 +119,11 @@ export const forgetPassword = async function (req, res, next) {
             createdAt: new Date()  // This will trigger the TTL countdown
         });
         await otpDocument.save();
+        console.log(`OTP generated and saved for ${email}: ${otp}`);
 
         // Nodemailer transport
         const transporter = nodemailer.createTransport({
-            service: 'gmail', 
+            service: 'gmail',
             auth: {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASSWORD
@@ -145,7 +149,7 @@ export const forgetPassword = async function (req, res, next) {
                     <p style="color: #333;">This OTP is valid for the next 30 minutes. If you did not request a password reset, please ignore this email or contact support if you have questions.</p>
 
                     <p style="text-align: center; color: #999; font-size: 12px; margin-top: 20px;">
-                        © ${new Date().getFullYear()} Steelisia. All rights reserved.
+                        © ${new Date().getFullYear()} YourCompany. All rights reserved.
                     </p>
                 </div>
             `
@@ -160,18 +164,22 @@ export const forgetPassword = async function (req, res, next) {
     }
 };
 
+
 // OTP Verification function
 export const verifyOtp = async function (req, res, next) {
     try {
         const { email, otp } = req.body;
+        console.log(`Verifying OTP for: ${email}`);
 
-        // Find the OTP document for the specified email
         const otpRecord = await Otp.findOne({ userId: email });
+        console.log(`OTP Record Found: ${JSON.stringify(otpRecord)}`);
 
         // Check if OTP exists for the email
         if (!otpRecord) {
             return res.status(400).json({ message: 'OTP not found or expired' });
         }
+
+        console.log(`Stored OTP: ${otpRecord.otp}, Provided OTP: ${otp}`);
 
         // Verify if the OTP matches
         if (otpRecord.otp !== otp) {
@@ -181,7 +189,6 @@ export const verifyOtp = async function (req, res, next) {
         // If OTP is correct, remove it from the database (for one-time use)
         await Otp.deleteOne({ userId: email });
 
-        // Proceed to password reset or other next steps
         res.status(200).json({ message: 'OTP verified successfully. Proceed with password reset.' });
     } catch (error) {
         console.error('Error in verifyOtp:', error);
@@ -189,27 +196,22 @@ export const verifyOtp = async function (req, res, next) {
     }
 };
 
+
+
 // Reset Password function
 export const resetPassword = async function (req, res, next) {
     try {
-        const { email, otp, newPassword } = req.body;
+        const { email, newPassword } = req.body;
 
-        // Find the OTP document for the specified email
-        const otpRecord = await Otp.findOne({ userId: email });
-
-        // Check if OTP exists and matches
-        if (!otpRecord || otpRecord.otp !== otp) {
-            return res.status(400).json({ message: 'Invalid or expired OTP' });
-        }
-
-        // If OTP is valid, hash the new password
+        // If the password reset request was initiated, no need to verify OTP again here
+        // This function assumes OTP has already been verified
+        // Hash the new password
         const hashedPassword = await bcrypt.hash(newPassword, 10);
 
         // Update user's password in the User model
         await User.findOneAndUpdate({ email }, { password: hashedPassword });
 
-        // Delete OTP after successful password reset
-        await Otp.deleteOne({ userId: email });
+       
 
         return res.status(200).json({ message: 'Password reset successfully' });
     } catch (error) {

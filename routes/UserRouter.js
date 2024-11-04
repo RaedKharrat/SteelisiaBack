@@ -1,7 +1,7 @@
 import express from 'express';
 import { body } from 'express-validator';
 import multer from '../middlewares/multer-config.js';
-import { Register, login, logout, forgetPassword } from '../controllers/AuthController.js';
+import { Register, login, logout, forgetPassword ,verifyOtp , resetPassword} from '../controllers/AuthController.js';
 import { getAllUsers, getUserById, updateUser, deleteUser } from '../controllers/UserController.js';
 import { validationResult } from 'express-validator';
 
@@ -32,14 +32,22 @@ router.post('/login', [
 ], validateRequest, login);
 
 // Logout route
-router.delete('/logout', logout);
+    router.delete('/logout', logout);
 
-// User CRUD routes
-router.route('/')
+    router.route('/')
     .get(getAllUsers) // Retrieve all users
 
-router.route('/forgetpwd')
+    router.route('/forgetpwd')
     .post(forgetPassword); // Assuming you want to allow OTP requests at this endpoint
+
+
+    router.route('/otpverify')
+    .post(verifyOtp)
+
+    
+    router.route('/resetpwd')
+    .post(resetPassword)
+
 
 router.route('/:id')
     .get(getUserById)
