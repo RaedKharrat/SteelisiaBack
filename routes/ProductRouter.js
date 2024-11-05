@@ -1,7 +1,7 @@
 import express from 'express';
 import { body } from 'express-validator';
 import multer from '../middlewares/multer-config.js';
-import { addOnce, updateOnce, getAll, getOneById, deleteOnce } from '../controllers/ProductController.js';
+import { addOnce, updateOnce, getAll, getOneById, deleteOnce ,countProducts} from '../controllers/ProductController.js';
 
 const router = express.Router();
 
@@ -10,7 +10,8 @@ router.route('/')
     .get(getAll)
     .post(
         multer,addOnce);
-
+router.route('/countp')
+.get(countProducts)
 // Handling routes for the '/product/:id' endpoint
 router.route('/:id')
     .get(getOneById)

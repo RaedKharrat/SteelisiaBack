@@ -1,5 +1,10 @@
 import { validationResult } from 'express-validator';
 import User from '../models/User.js';
+import nodemailer from 'nodemailer';
+
+
+
+
 
 // Controller function to update a user
 export function updateUser(req, res) {
@@ -74,5 +79,14 @@ export function deleteUser(req, res) {
         })
         .catch((err) => {
             res.status(500).json({ error: 'Error deleting user: ' + err.message });
+        });
+}
+export function countUsers(req, res) {
+    User.countDocuments()
+        .then((count) => {
+            res.json({ totalUser: count }); // Return the total product count
+        })
+        .catch((err) => {
+            res.status(500).json({ error: 'Error counting User: ' + err.message });
         });
 }

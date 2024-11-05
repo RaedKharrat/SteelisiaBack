@@ -107,3 +107,14 @@ export function deleteOnce(req, res) {
             res.status(500).json({ error: 'Error deleting product: ' + err.message });
         });
 }
+
+// Controller function to count all products
+export function countProducts(req, res) {
+    Product.countDocuments()
+        .then((count) => {
+            res.json({ totalProducts: count }); // Return the total product count
+        })
+        .catch((err) => {
+            res.status(500).json({ error: 'Error counting products: ' + err.message });
+        });
+}
