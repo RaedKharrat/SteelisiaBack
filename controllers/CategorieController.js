@@ -82,3 +82,13 @@ export function deleteOnce(req, res) {
             res.status(500).json({ error: 'Error deleting category: ' + err.message });
         });
 }
+// Controller function to count all products
+export function countCategorie(req, res) {
+    Categorie.countDocuments()
+        .then((count) => {
+            res.json({ totalCategories: count }); // Return the total product count
+        })
+        .catch((err) => {
+            res.status(500).json({ error: 'Error counting Categories: ' + err.message });
+        });
+}
