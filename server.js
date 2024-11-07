@@ -38,8 +38,10 @@ mongoose.connect(`mongodb://127.0.0.1:27017/${databaseName}`, {
 });
 
 // Middleware
-app.use(cors());
-app.use(morgan('dev'));
+app.use(cors({
+    origin: 'http://localhost:3000',
+    credentials: true, // Allow credentials (cookies) to be sent
+  }));app.use(morgan('dev'));
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));

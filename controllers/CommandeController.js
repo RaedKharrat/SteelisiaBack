@@ -82,22 +82,20 @@ export const updateCommande = async (req, res) => {
     }
 };
 
-// Delete a commande
-export const deleteCommande = async (req, res) => {
-    const { id } = req.params;
 
-    try {
-        const commande = await Commande.findById(id);
-        if (!commande) {
-            return res.status(404).json({ error: 'Commande not found' });
-        }
 
-        await commande.remove();
-        res.status(200).json({ message: 'Commande deleted successfully' });
-    } catch (err) {
-        res.status(500).json({ error: 'Error deleting commande: ' + err.message });
-    }
-};
+export function deleteCommande(req, res) {
+    Commande.findByIdAndDelete(req.params.id)
+        .then((deletedCommande) => {
+            if (!deletedCommande) {
+                return res.status(404).json({ message: 'Commande not found' });
+            }
+            res.json({ message: 'Commande deleted successfully' });
+        })
+        .catch((err) => {
+            res.status(500).json({ error: 'Error deleting Commande: ' + err.message });
+        });
+}
 // Count total commandes
 export const countCmd = async (req, res) => {
     try {
@@ -105,5 +103,62 @@ export const countCmd = async (req, res) => {
         res.status(200).json({ totalCommands }); // Return the count of commandes
     } catch (err) {
         res.status(500).json({ error: 'Error counting commandes: ' + err.message });
+    }
+};
+
+//stat
+// Count all shipped commandes
+export const countShippedCmd = async (req, res) => {
+    try {
+        const shippedCount = await Commande.countDocuments({ status: 'shipped' }); // Count all commandes with status 'shipped'
+        res.status(200).json({ shippedCount }); // Return the count of shipped commandes
+    } catch (err) {
+        res.status(500).json({ error: 'Error counting shipped commandes: ' + err.message });
+    }
+};
+
+// Get all pending commandes
+export const getAllPendingCmd = async (req, res) => {
+    try {
+        const pendingCommandes = await Commande.countDocuments({ status: 'pending' })
+
+        res.status(200).json({pendingCommandes}); // Return all commandes with status 'pending'
+    } catch (err) {
+        res.status(500).json({ error: 'Error fetching pending commandes: ' + err.message });
+    }
+};
+
+// Get all canceled commandes
+export const getAllCanceledCmd = async (req, res) => {
+    try {
+        const canceledCommandes = await Commande.countDocuments({ status: 'canceled' })
+
+        res.status(200).json({canceledCommandes}); // Return all commandes with status 'canceled'
+    } catch (err) {
+        res.status(500).json({ error: 'Error fetching canceled commandes: ' + err.message });
+    }
+};
+
+// Get all delivered commandes
+export const getAllDeliveredCmd = async (req, res) => {
+    try {
+        const deliveredCommandes = await Commande.countDocuments({ status: 'delivered' })
+
+        res.status(200).json({deliveredCommandes}); // Return all commandes with status 'delivered'
+    } catch (err) {
+        res.status(500).json({ error: 'Error fetching delivered commandes: ' + err.message });
+    }
+};
+
+// Sum of all total amounts for commandes with status 'delivered'
+export const sumDeliveredCmd = async (req, res) => {
+    try {
+        const deliveredCommandes = await Commande.aggregate([
+            { $match: { status: 'delivered' } }, // Filter commandes with status 'delivered'
+            { $group: { _id: null, totalAmount: { $sum: '$totalAmount' } } } // Sum the totalAmount of all delivered commandes
+        ]);
+        res.status(200).json({ totalDeliveredAmount: deliveredCommandes[0]?.totalAmount || 0 }); // Return the sum
+    } catch (err) {
+        res.status(500).json({ error: 'Error summing delivered commandes: ' + err.message });
     }
 };
