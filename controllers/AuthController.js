@@ -132,7 +132,7 @@ export const forgetPassword = async function (req, res, next) {
         });
 
         const mailOptions = {
-            from: `"Support Team" <${process.env.EMAIL_USER}>`,
+            from: `"Steelisia Support Team" <${process.env.EMAIL_USER}>`,
             to: email,
             subject: 'Your Code for Password Reset',
             html: `
