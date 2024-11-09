@@ -80,6 +80,7 @@ export const Register = async (req, res) => {
             last_name: req.body.last_name,
             phone: req.body.phone,
             adresse: req.body.adresse,
+            companyName: req.body.companyName,
             role: req.body.role || 'Client' // Default role if not provided
         });
 
