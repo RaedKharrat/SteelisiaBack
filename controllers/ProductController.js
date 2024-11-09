@@ -23,7 +23,7 @@ export function addOnce(req, res) {
         images: req.files.map(file => file.filename), // Map filenames from the uploaded files
         idCategorie: req.body.idCategorie,
     };
-
+    
     Product.create(productData)
         .then((newProduct) => {
             res.status(201).json(newProduct); // Return the newly created product
