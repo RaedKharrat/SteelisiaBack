@@ -20,7 +20,7 @@ const validateRequest = (req, res, next) => {
 // Signup route with file upload handling
 router.post('/signup', multer, [
     body('email').isEmail().withMessage('Please provide a valid email'),
-    body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
+    body('password').isLength({ min: 6 }).withMessage('Password must be at least 8 characters'),
     body('first_name').notEmpty().withMessage('First name is required'),
     body('last_name').notEmpty().withMessage('Last name is required'),
 ], validateRequest, Register);

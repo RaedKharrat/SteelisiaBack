@@ -200,180 +200,112 @@ export const downloadCommandePdf = async (req, res) => {
     try {
         // Retrieve the commande by ID and populate user and products
         const commande = await Commande.findById(id)
-            .populate("userId", "first_name last_name email phone")
+            .populate("userId", "first_name last_name email phone adresse")
             .populate("products.productId", "name prix");
 
         if (!commande) {
             return res.status(404).json({ error: 'Commande not found' });
         }
 
-        // Create HTML structure with inline CSS for styling
-        const htmlContent = `
-        <html>
-        <head>
-            <style>
-                body {
-                    font-family: Arial, sans-serif;
-                    color: #333;
-                    background-color: #f4f4f9;
-                    margin: 0;
-                    padding: 20px;
-                }
-                .container {
-                    max-width: 700px;
-                    margin: 0 auto;
-                    background-color: #fff;
-                    padding: 20px;
-                    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-                    border-radius: 8px;
-                }
-                .title {
-                    text-align: center;
-                    font-size: 32px;
-                    font-weight: bold;
-                    color: #2e7d32;
-                }
-                .subtitle {
-                    text-align: center;
-                    font-size: 20px;
-                    color: #555;
-                    margin-top: -10px;
-                    font-style: italic;
-                }
-                .header {
-                    text-align: center;
-                    font-size: 24px;
-                    font-weight: bold;
-                    color: #333;
-                    padding-bottom: 10px;
-                    border-bottom: 2px solid #ddd;
-                }
-                .section {
-                    margin-top: 20px;
-                }
-                .user-info {
-                    padding: 15px;
-                    border-radius: 8px;
-                    background-color: #f7f8fc;
-                    border: 1px solid #e1e4e8;
-                    margin-bottom: 20px;
-                }
-                h3 {
-                    margin: 0 0 10px 0;
-                    color: #555;
-                    font-size: 20px;
-                }
-                p {
-                    margin: 5px 0;
-                }
-                .order-table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    margin-top: 10px;
-                    background-color: #fff;
-                    border-radius: 8px;
-                    overflow: hidden;
-                }
-                .order-table th, .order-table td {
-                    border: 1px solid #ddd;
-                    padding: 10px;
-                    font-size: 14px;
-                    text-align: left;
-                }
-                .order-table th {
-                    background-color: #f4f4f9;
-                    color: #444;
-                    font-weight: bold;
-                }
-                .total {
-                    margin-top: 20px;
-                    padding: 15px;
-                    border-radius: 8px;
-                    background-color: #e8f5e9;
-                    border: 1px solid #c8e6c9;
-                    font-size: 18px;
-                    color: #2e7d32;
-                    text-align: center;
-                    font-weight: bold;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="title">Steelisia</div>
-                <div class="subtitle">bon d'achat</div>
-        
-                <div class="header">Commande Summary</div>
-        
-                <div class="section user-info">
-                    <h3>Client Information</h3>
-                    <p><strong>Name:</strong> ${commande.userId.first_name} ${commande.userId.last_name}</p>
-                    <p><strong>Email:</strong> ${commande.userId.email}</p>
-                    <p><strong>Phone Number:</strong> ${commande.userId.phone || "N/A"}</p>
-                </div>
-        
-                <div class="section order-info">
-                    <h3>Order Details</h3>
-                    <table class="order-table">
-                        <thead>
-                            <tr>
-                                <th>Product</th>
-                                <th>Quantity</th>
-                                <th>Price</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${commande.products.map((item) => `
-                                <tr>
-                                    <td>${item.productId.name}</td>
-                                    <td>${item.quantity}</td>
-                                    <td>$${item.totalPrice.toFixed(2)}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-        
-                <div class="section total">
-                    <h3>Total Amount</h3>
-                    <p><strong>$${commande.totalAmount.toFixed(3)}</strong></p>
-                </div>
-            </div>
-        </body>
-        </html>
-        `;
-        
-
-
-
-        // Inline CSS to ensure proper rendering in PDF
-        const inlinedHtml = await inlineCss(htmlContent, { url: '/' });
-
-        // Generate PDF from inlined HTML
+        // Create a new PDF document
         const doc = new PDFDocument({ size: 'A4', margin: 40 });
         doc.pipe(res);
         res.setHeader('Content-Disposition', `attachment; filename="Commande_${commande._id}.pdf"`);
         res.setHeader('Content-Type', 'application/pdf');
 
-        // Load HTML content into the PDF
-        const { window } = new JSDOM(inlinedHtml);
-        const document = window.document;
+        // Set up fonts and styles for rendering manually
+        doc.fontSize(42).fillColor('orange').text('Steelisia', { align: 'center' });
+        doc.fontSize(20).fillColor('#000').text('Bon d\'achat', { align: 'center' });
 
-        // Render elements into PDF
-        doc.fontSize(20).text(document.querySelector(".header").textContent, { align: "center" });
-        doc.moveDown();
+        // Client information section
+        doc.moveDown(2).fontSize(20).text('Client Information', { align: 'left' }).moveDown(0.5);
+        doc.fontSize(14).text(`Name: ${commande.userId.first_name} ${commande.userId.last_name}`, { align: 'left' });
+        doc.text(`Email: ${commande.userId.email}`, { align: 'left' });
+        doc.text(`Phone: ${commande.userId.phone || "N/A"}`, { align: 'left' });
+        doc.text(`Adresse Livraison: ${commande.userId.adresse || "N/A"}`, { align: 'left' });
+
+        // Order details section
+        doc.moveDown(2).fontSize(20).text('Order Details', { align: 'left' }).moveDown(0.5);
+
+        // Set up table header
+        const startX = doc.x; // Save the current X position
+        const tableTop = doc.y; // Save the current Y position
+
+        // Draw table headers
+        const headers = ['Product', 'Quantity', 'Price'];
+        const headerWidths = [80, 80, 80]; // Column widths
+        doc.fontSize(14).fillColor('#fff').rect(startX, tableTop, headerWidths.reduce((a, b) => a + b), 25).fill('#4e342e');
         
-        const userInfo = document.querySelector(".user-info").textContent.trim();
-        doc.fontSize(14).text(userInfo, { align: "left" });
-        doc.moveDown();
+        headers.forEach((header, i) => {
+            doc.fontSize(14).fillColor('#fff').text(header, startX + (headerWidths[i] * i) + 10, tableTop + 5);
+        });
 
-        const orderInfo = document.querySelector(".order-info").textContent.trim();
-        doc.fontSize(14).text(orderInfo, { align: "left" });
-        doc.moveDown();
+        doc.moveDown(1); // Move down for the table body
 
-        const totalInfo = document.querySelector(".total").textContent.trim();
-        doc.fontSize(14).text(totalInfo, { align: "right" });
+        // Draw table data rows
+        const rowHeight = 30;
+        let yPosition = tableTop + 30;
+        const alternatingColor = ['#f7f7f7', '#ffffff']; // Alternating row colors
 
+        commande.products.forEach((item, index) => {
+            const bgColor = alternatingColor[index % 2];
+            doc.rect(startX, yPosition, headerWidths.reduce((a, b) => a + b), rowHeight).fill(bgColor);
+
+            // Product name in the first column
+            doc.fontSize(12).fillColor('#333').text(item.productId.name, startX + 10, yPosition + 8);
+            
+            // Quantity in the second column
+            doc.text(item.quantity, startX + headerWidths[0] + 10, yPosition + 8);
+            
+            // Price in the third column
+            doc.text(` Dt ${item.productId.prix.toFixed(2)}`, startX + headerWidths[0] + headerWidths[1] + 10, yPosition + 8);
+
+            yPosition += rowHeight; // Move to the next row
+        });
+
+        // Draw table borders
+        doc.rect(startX, tableTop, headerWidths.reduce((a, b) => a + b), rowHeight * (commande.products.length + 1))
+            .lineWidth(1)
+            .strokeColor('#ddd')
+            .stroke();
+
+        // Draw vertical borders for the columns
+        doc.moveTo(startX + headerWidths[0], tableTop)
+            .lineTo(startX + headerWidths[0], yPosition)
+            .strokeColor('#ddd')
+            .lineWidth(1)
+            .stroke();
+
+        doc.moveTo(startX + headerWidths[0] + headerWidths[1], tableTop)
+            .lineTo(startX + headerWidths[0] + headerWidths[1], yPosition)
+            .strokeColor('#ddd')
+            .lineWidth(1)
+            .stroke();
+
+        doc.moveTo(startX + headerWidths[0] + headerWidths[1] + headerWidths[2], tableTop)
+            .lineTo(startX + headerWidths[0] + headerWidths[1] + headerWidths[2], yPosition)
+            .strokeColor('#ddd')
+            .lineWidth(1)
+            .stroke();
+
+        // Total amount section
+        doc.moveDown(2).fontSize(18).fillColor('orange').text('Total Amount:', { align: 'right' });
+        doc.fontSize(26).fillColor('#000').text(`$${commande.totalAmount.toFixed(2)}`, { align: 'right' });
+
+        // Add separator line between content and footer
+        const separatorYPosition = doc.page.height - 80; // Adjust the Y position based on content height
+        doc.moveTo(doc.page.margins.left, separatorYPosition)
+            .lineTo(doc.page.width - doc.page.margins.right, separatorYPosition)
+            .lineWidth(1)
+            .strokeColor('#4e342e')
+            .stroke();
+
+        // Footer section
+        const footerHeight = 20;
+        const footerYPosition = doc.page.height - footerHeight - doc.page.margins.bottom;
+        doc.fontSize(10).fillColor('#4e342e').text('Steelisia - All Rights Reserved', doc.page.width / 2 - 100, footerYPosition, { align: 'center' });
+
+        // End the PDF generation
         doc.end();
     } catch (err) {
         res.status(500).json({ error: 'Error generating PDF: ' + err.message });

@@ -118,3 +118,16 @@ export function countProducts(req, res) {
             res.status(500).json({ error: 'Error counting products: ' + err.message });
         });
 }
+// Controller function to get the four newest products
+export function getNewestProducts(req, res) {
+    Product.find()
+        .sort({ createdAt: -1 }) // Sort by createdAt in descending order
+        .limit(4) // Limit the results to 4
+        .populate('idCategorie') // Include category details in the product data
+        .then((newestProducts) => {
+            res.json(newestProducts); // Return the newest products
+        })
+        .catch((err) => {
+            res.status(500).json({ error: 'Error retrieving newest products: ' + err.message });
+        });
+}
