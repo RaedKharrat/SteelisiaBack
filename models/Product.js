@@ -33,6 +33,10 @@ const productSchema = new Schema({
         ref: 'Categorie',
         required: false,
     },
+    sousCategorie: {
+        type: String,
+        required: false,
+    }
 }, {
     timestamps: true,
 });

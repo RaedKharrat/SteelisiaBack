@@ -1,7 +1,7 @@
 import express from 'express';
 import { body } from 'express-validator';
 import multer from '../middlewares/multer-config.js';
-import { Register, login, logout, forgetPassword ,verifyOtp , resetPassword} from '../controllers/AuthController.js';
+import { Register, login, logout, forgetPassword ,verifyOtp , resetPassword,googleSignupOrLogin} from '../controllers/AuthController.js';
 import { getAllUsers, getUserById, updateUser, deleteUser ,countUsers} from '../controllers/UserController.js';
 import { validationResult } from 'express-validator';
 
@@ -16,6 +16,7 @@ const validateRequest = (req, res, next) => {
     }
     next();
 };
+router.post('/google-auth', googleSignupOrLogin);
 
 // Signup route with file upload handling
 router.post('/signup', multer, [

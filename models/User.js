@@ -10,7 +10,7 @@ const UserSchema = new Schema({
     },
     password: {
         type: String,
-        required: true
+        required: false
     },
     first_name: {
         type: String,
@@ -26,11 +26,11 @@ const UserSchema = new Schema({
     },
     phone: {
         type: String,
-        required: true
+        required: false
     },
     adresse: {
         type: String,
-        required: true
+        required: false
     },
     image: {
         type: String,

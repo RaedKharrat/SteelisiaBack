@@ -290,7 +290,7 @@ export const downloadCommandePdf = async (req, res) => {
 
         // Total amount section
         doc.moveDown(2).fontSize(18).fillColor('orange').text('Total Amount:', { align: 'right' });
-        doc.fontSize(26).fillColor('#000').text(`$${commande.totalAmount.toFixed(2)}`, { align: 'right' });
+        doc.fontSize(26).fillColor('#000').text(`Dt ${commande.totalAmount.toFixed(2)}`, { align: 'right' });
 
         // Add separator line between content and footer
         const separatorYPosition = doc.page.height - 80; // Adjust the Y position based on content height

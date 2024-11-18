@@ -6,10 +6,74 @@ import Otp from '../models/Otp.js';
 import crypto from 'crypto';
 import otpGenerator from 'otp-generator';  
 import nodemailer from 'nodemailer';
+import { OAuth2Client } from 'google-auth-library';
 
 
 
 const JWT_SECRET = crypto.randomBytes(32).toString('hex');
+
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID; // Make sure this is set securely in environment variables
+const client = new OAuth2Client(GOOGLE_CLIENT_ID);
+
+export const googleSignupOrLogin = async (req, res) => {
+    try {
+      const { token: idToken } = req.body; 
+      if (!idToken) {
+        return res.status(400).json({ error: "No token provided" });
+      }
+  
+      const ticket = await client.verifyIdToken({
+        idToken,
+        audience: GOOGLE_CLIENT_ID,
+      });
+  
+      const payload = ticket.getPayload();
+      const { email, given_name, family_name } = payload;
+  
+      let user = await User.findOne({ email });
+      if (!user) {
+        // If user doesn't exist, create a new user
+        user = new User({
+          email,
+          first_name: given_name,
+          last_name: family_name,
+          role: 'Client',
+          adresse: '', // Optional or set a default value
+          phone: '',   // Optional or set a default value
+          password: '', // Optional or leave empty
+        });
+        await user.save();
+      }
+  
+      const jwtToken = jwt.sign(
+        { userId: user._id, role: user.role, email: user.email },
+        JWT_SECRET,
+        { expiresIn: '1h' }
+      );
+  
+      res.cookie('jwt', jwtToken, {
+        httpOnly: true,
+        maxAge: 3600 * 1000, 
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'None',
+      });
+  
+      res.status(200).json({
+        message: 'User successfully signed in with Google',
+        user: { id: user._id, email: user.email, name: `${user.first_name} ${user.last_name}` },
+        token: jwtToken,
+      });
+  
+    } catch (error) {
+      console.error('Error in Google Signup/Login:', error);
+      if (error.response) {
+        return res.status(error.response.status || 500).json({ error: 'Google Authentication Error' });
+      }
+      return res.status(500).json({ error: 'Internal Server Error' });
+    }
+  };
+  
+
 
 // Login function
 export const login = async function (req, res, next) {

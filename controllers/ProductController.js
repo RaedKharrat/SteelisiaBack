@@ -22,6 +22,8 @@ export function addOnce(req, res) {
         qnt: req.body.qnt,
         images: req.files.map(file => file.filename), // Map filenames from the uploaded files
         idCategorie: req.body.idCategorie,
+        sousCategorie: req.body.sousCategorie,
+
     };
     
     Product.create(productData)
@@ -48,6 +50,8 @@ export function updateOnce(req, res) {
         etat: req.body.etat,
         qnt: req.body.qnt,
         idCategorie: req.body.idCategorie,
+        sousCategorie: req.body.sousCategorie,
+
     };
 
     // Handle the images if provided
@@ -122,12 +126,41 @@ export function countProducts(req, res) {
 export function getNewestProducts(req, res) {
     Product.find()
         .sort({ createdAt: -1 }) // Sort by createdAt in descending order
-        .limit(4) // Limit the results to 4
+        .limit(10) // Limit the results to 10
         .populate('idCategorie') // Include category details in the product data
         .then((newestProducts) => {
             res.json(newestProducts); // Return the newest products
         })
         .catch((err) => {
             res.status(500).json({ error: 'Error retrieving newest products: ' + err.message });
+        });
+}
+// Controller function to get 8 random products
+export function getRandomProducts(req, res) {
+    Product.aggregate([
+        { $sample: { size: 8 } } // Randomly selects 8 products
+    ])
+    .populate('idCategorie') // Include category details in the product data
+    .then((randomProducts) => {
+        res.json(randomProducts); // Return the randomly selected products
+    })
+    .catch((err) => {
+        res.status(500).json({ error: 'Error retrieving random products: ' + err.message });
+    });
+}
+// Controller function to get all products for a selected category
+export function getProductsByCategory(req, res) {
+    const { categorieId } = req.params; // Retrieve category ID from URL parameters
+
+    Product.find({ idCategorie: categorieId }) // Filter products by category ID
+        .populate('idCategorie') // Include category details in the product data
+        .then((products) => {
+            if (products.length === 0) {
+                return res.status(404).json({ message: 'No products found for this category' });
+            }
+            res.json(products); // Return products for the specified category
+        })
+        .catch((err) => {
+            res.status(500).json({ error: 'Error retrieving products by category: ' + err.message });
         });
 }

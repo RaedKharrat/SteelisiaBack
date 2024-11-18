@@ -1,13 +1,17 @@
 import express from 'express';
 import { body } from 'express-validator';
 import multer from '../middlewares/multer-config.js';
-import { addOnce, updateOnce, getAll, getOneById, deleteOnce ,countProducts, getNewestProducts} from '../controllers/ProductController.js';
+import { addOnce, updateOnce, getAll, getOneById, deleteOnce ,countProducts, getNewestProducts ,getRandomProducts,getProductsByCategory} from '../controllers/ProductController.js';
 
 const router = express.Router();
 
 // Handling routes for the '/product' endpoint
 router.route('/newest')
     .get(getNewestProducts)
+    router.route('/randomproduct')
+    .get(getRandomProducts)
+    router.route('/productsbycategorie/:categorieId')
+    .get(getProductsByCategory)
 router.route('/')
     .get(getAll)
     .post(

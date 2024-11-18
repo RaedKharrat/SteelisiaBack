@@ -21,6 +21,7 @@
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
     "express-validator": "^7.2.0",
+    "google-auth-library": "^9.15.0",
     "html-pdf-chrome": "^0.8.4",
     "inline-css": "^4.0.2",
     "jsdom": "^25.0.1",
