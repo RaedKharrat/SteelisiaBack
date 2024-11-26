@@ -63,6 +63,28 @@ export const createCommande = async (req, res) => {
     }
 };
 
+// Get all commandes for a specific user
+export const getCommandesByUser = async (req, res) => {
+    const { userId } = req.params; // Extract userId from request parameters
+
+    try {
+        // Find commandes for the specified user and populate related fields
+        const userCommandes = await Commande.find({ userId })
+            .populate("userId", "first_name last_name email")
+            .populate("products.productId", "name prix");
+
+        // If no commandes are found, return an appropriate response
+        if (!userCommandes || userCommandes.length === 0) {
+            return res.status(404).json({ message: 'No commandes found for the specified user.' });
+        }
+
+        // Return the found commandes
+        res.status(200).json(userCommandes);
+    } catch (err) {
+        // Handle errors and send an appropriate response
+        res.status(500).json({ error: 'Error fetching commandes for user: ' + err.message });
+    }
+};
 
 // Get all commandes
 export const getAllCommandes = async (req, res) => {
@@ -190,10 +212,6 @@ export const sumDeliveredCmd = async (req, res) => {
     }
 };
 
-
-
-// Generate PDF for a single commande
-
 export const downloadCommandePdf = async (req, res) => {
     const { id } = req.params;
 
@@ -227,66 +245,62 @@ export const downloadCommandePdf = async (req, res) => {
         // Order details section
         doc.moveDown(2).fontSize(20).text('Order Details', { align: 'left' }).moveDown(0.5);
 
-        // Set up table header
+        // Table setup dynamically adjusting for width and height
         const startX = doc.x; // Save the current X position
         const tableTop = doc.y; // Save the current Y position
 
-        // Draw table headers
+        // Calculate column widths based on content size or page width
+        const tableWidth = doc.page.width - 2 * doc.page.margins.left; // Full width available
+        const columnCount = 3; // We have 3 columns
+        const columnPadding = 10; // Padding between text and column border
+        const columnWidth = tableWidth / columnCount; // Dynamic width per column
+
+        // Draw table headers with dynamic widths
         const headers = ['Product', 'Quantity', 'Price'];
-        const headerWidths = [80, 80, 80]; // Column widths
-        doc.fontSize(14).fillColor('#fff').rect(startX, tableTop, headerWidths.reduce((a, b) => a + b), 25).fill('#4e342e');
+        const headerHeight = 25;
+        doc.fontSize(14).fillColor('#fff').rect(startX, tableTop, tableWidth, headerHeight).fill('#4e342e');
         
         headers.forEach((header, i) => {
-            doc.fontSize(14).fillColor('#fff').text(header, startX + (headerWidths[i] * i) + 10, tableTop + 5);
+            doc.fontSize(14).fillColor('#fff').text(header, startX + columnWidth * i + columnPadding, tableTop + 5);
         });
 
-        doc.moveDown(1); // Move down for the table body
+        // Move down for table body
+        let rowHeight = 30;
+        let yPosition = tableTop + headerHeight;
 
-        // Draw table data rows
-        const rowHeight = 30;
-        let yPosition = tableTop + 30;
+        // Draw table rows dynamically with alternating colors
         const alternatingColor = ['#f7f7f7', '#ffffff']; // Alternating row colors
 
         commande.products.forEach((item, index) => {
             const bgColor = alternatingColor[index % 2];
-            doc.rect(startX, yPosition, headerWidths.reduce((a, b) => a + b), rowHeight).fill(bgColor);
+            doc.rect(startX, yPosition, tableWidth, rowHeight).fill(bgColor);
 
             // Product name in the first column
-            doc.fontSize(12).fillColor('#333').text(item.productId.name, startX + 10, yPosition + 8);
+            doc.fontSize(12).fillColor('#333').text(item.productId.name, startX + columnPadding, yPosition + 8);
             
             // Quantity in the second column
-            doc.text(item.quantity, startX + headerWidths[0] + 10, yPosition + 8);
+            doc.text(item.quantity, startX + columnWidth + columnPadding, yPosition + 8);
             
             // Price in the third column
-            doc.text(` Dt ${item.productId.prix.toFixed(2)}`, startX + headerWidths[0] + headerWidths[1] + 10, yPosition + 8);
+            doc.text(` Dt ${item.productId.prix.toFixed(2)}`, startX + 2 * columnWidth + columnPadding, yPosition + 8);
 
             yPosition += rowHeight; // Move to the next row
         });
 
         // Draw table borders
-        doc.rect(startX, tableTop, headerWidths.reduce((a, b) => a + b), rowHeight * (commande.products.length + 1))
+        doc.rect(startX, tableTop, tableWidth, rowHeight * (commande.products.length + 1))
             .lineWidth(1)
             .strokeColor('#ddd')
             .stroke();
 
-        // Draw vertical borders for the columns
-        doc.moveTo(startX + headerWidths[0], tableTop)
-            .lineTo(startX + headerWidths[0], yPosition)
-            .strokeColor('#ddd')
-            .lineWidth(1)
-            .stroke();
-
-        doc.moveTo(startX + headerWidths[0] + headerWidths[1], tableTop)
-            .lineTo(startX + headerWidths[0] + headerWidths[1], yPosition)
-            .strokeColor('#ddd')
-            .lineWidth(1)
-            .stroke();
-
-        doc.moveTo(startX + headerWidths[0] + headerWidths[1] + headerWidths[2], tableTop)
-            .lineTo(startX + headerWidths[0] + headerWidths[1] + headerWidths[2], yPosition)
-            .strokeColor('#ddd')
-            .lineWidth(1)
-            .stroke();
+        // Draw vertical borders for columns
+        [1, 2].forEach((i) => {
+            doc.moveTo(startX + columnWidth * i, tableTop)
+                .lineTo(startX + columnWidth * i, yPosition)
+                .strokeColor('#ddd')
+                .lineWidth(1)
+                .stroke();
+        });
 
         // Total amount section
         doc.moveDown(2).fontSize(18).fillColor('orange').text('Total Amount:', { align: 'right' });
@@ -311,3 +325,4 @@ export const downloadCommandePdf = async (req, res) => {
         res.status(500).json({ error: 'Error generating PDF: ' + err.message });
     }
 };
+
