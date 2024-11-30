@@ -34,3 +34,5 @@ export default multer({
     limits: { fileSize: 2048 * 1024 }, // Limit to 512KB
     fileFilter,
 }).array("images", 10); // Change to array to accept multiple files (up to 10 in this case)
+
+

@@ -1,6 +1,113 @@
 import { validationResult } from 'express-validator';
 import Product from '../models/Product.js';
+import fs from 'fs';
+import path from 'path';
+import multer from 'multer';
 
+// Configure multer for PDF file uploads
+const pdfStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadPath = 'uploads/pdf';
+        // Ensure the directory exists
+        if (!fs.existsSync(uploadPath))  {
+            fs.mkdirSync(uploadPath, { recursive: true });
+        }
+        cb(null, uploadPath); // Save to uploads/pdf folder
+    },
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + '-' + file.originalname); // Add timestamp to avoid filename conflicts
+    },
+});
+
+// Filter for PDFs only
+const pdfFilter = (req, file, cb) => {
+    if (file.mimetype === 'application/pdf') {
+        cb(null, true);
+    } else {
+        cb(new Error('Only PDF files are allowed'), false);
+    }
+};
+
+// Multer middleware for handling PDF uploads
+const upload = multer({ storage: pdfStorage, fileFilter: pdfFilter });
+
+// Controller function to upload a PDF
+export const uploadPDF = (req, res) => {
+    upload.single('pdf')(req, res, (err) => {
+        if (err) {
+            return res.status(400).json({ error: err.message });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({ error: 'No PDF file uploaded' });
+        }
+
+        const pdfDirectory = path.resolve('uploads/pdf');
+        
+        // Check if there is already an existing PDF file
+        fs.readdir(pdfDirectory, (err, files) => {
+            if (err) {
+                return res.status(500).json({ error: 'Error reading the directory' });
+            }
+
+            // Filter PDF files and delete the previous one if exists
+            const existingPDFs = files.filter(file => file.endsWith('.pdf'));
+
+            if (existingPDFs.length > 0) {
+                const previousFilePath = path.join(pdfDirectory, existingPDFs[0]);
+                
+                // Delete the previous PDF
+                fs.unlink(previousFilePath, (err) => {
+                    if (err) {
+                        return res.status(500).json({ error: 'Error deleting the previous file' });
+                    }
+                    
+                    // Respond with the new file upload success
+                    res.status(200).json({
+                        message: 'PDF uploaded and previous PDF deleted successfully',
+                        filePath: req.file.path,
+                    });
+                });
+            } else {
+                // If no existing file, just respond with the new file upload
+                res.status(200).json({
+                    message: 'PDF uploaded successfully',
+                    filePath: req.file.path,
+                });
+            }
+        });
+    });
+};
+
+export const downloadLatestPDF = (req, res) => {
+    const pdfDirectory = path.resolve('uploads/pdf');
+
+    // Read all files in the PDF directory
+    fs.readdir(pdfDirectory, (err, files) => {
+        if (err) {
+            return res.status(500).json({ error: 'Error reading directory' });
+        }
+
+        // Filter PDF files and sort them by modification date (latest first)
+        const pdfFiles = files.filter(file => file.endsWith('.pdf'))
+                               .sort((a, b) => fs.statSync(path.join(pdfDirectory, b)).mtime - fs.statSync(path.join(pdfDirectory, a)).mtime);
+
+        if (pdfFiles.length === 0) {
+            return res.status(404).json({ error: 'No PDF files found' });
+        }
+
+        // Get the most recent PDF file
+        const latestFile = pdfFiles[0];
+        const filePath = path.join(pdfDirectory, latestFile);
+
+        // Send the file for download
+        res.download(filePath, (err) => {
+            if (err) {
+                return res.status(500).json({ error: 'Error downloading the file' });
+            }
+        });
+    });
+};
 // Controller function to create a new product
 export function addOnce(req, res) {
     const errors = validationResult(req);
@@ -162,5 +269,46 @@ export function getProductsByCategory(req, res) {
         })
         .catch((err) => {
             res.status(500).json({ error: 'Error retrieving products by category: ' + err.message });
+        });
+}
+// Controller function to apply a discount to a product by price or percentage
+export function applyDiscount(req, res) {
+    const { discountType, discountValue } = req.body;
+
+    // Validate the discount inputs
+    if (!['price', 'percentage'].includes(discountType) || typeof discountValue !== 'number' || discountValue < 0) {
+        return res.status(400).json({ error: 'Invalid discount type or value' });
+    }
+
+    Product.findById(req.params.id)
+        .then((product) => {
+            if (!product) {
+                return res.status(404).json({ message: 'Product not found' });
+            }
+
+            let newPrice;
+
+            // Save the old price before updating
+            product.oldPrix = product.prix;
+
+            if (discountType === 'price') {
+                newPrice = product.prix - discountValue;
+            } else if (discountType === 'percentage') {
+                newPrice = product.prix - (product.prix * (discountValue / 100));
+            }
+
+            // Ensure the new price does not go below zero
+            newPrice = Math.max(newPrice, 0);
+
+            // Update the product price
+            product.prix = newPrice;
+
+            return product.save();
+        })
+        .then((updatedProduct) => {
+            res.json(updatedProduct); // Return the updated product
+        })
+        .catch((err) => {
+            res.status(500).json({ error: 'Error applying discount: ' + err.message });
         });
 }

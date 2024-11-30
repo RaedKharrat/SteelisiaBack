@@ -20,6 +20,10 @@ const productSchema = new Schema({
         enum: ['disponible', 'non disponible', 'coming soon'],
         required: true,
     },
+    oldPrix: { 
+        type: Number,
+        required: false,
+    },
     qnt: {
         type: String,
         required: true,

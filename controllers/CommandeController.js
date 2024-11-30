@@ -188,6 +188,32 @@ export const getAllCanceledCmd = async (req, res) => {
     }
 };
 
+// Cancel a commande
+export const cancelCommande = async (req, res) => {
+    const { id } = req.params;  // Extract commande id from URL params
+
+    try {
+        // Find the commande by id and update its status to 'canceled'
+        const commande = await Commande.findByIdAndUpdate(
+            id,
+            { status: 'canceled' },  // Set the new status
+            { new: true }  // Return the updated document
+        );
+
+        // If no commande is found, return a 404 error
+        if (!commande) {
+            return res.status(404).json({ error: 'Commande not found' });
+        }
+
+        // Return the updated commande with the new status
+        res.status(200).json(commande);
+    } catch (err) {
+        // Handle errors and send an appropriate response
+        res.status(500).json({ error: 'Error canceling commande: ' + err.message });
+    }
+};
+
+
 // Get all delivered commandes
 export const getAllDeliveredCmd = async (req, res) => {
     try {

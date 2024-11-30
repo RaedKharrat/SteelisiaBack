@@ -12,7 +12,8 @@ import {
     getAllDeliveredCmd,
     sumDeliveredCmd,
     downloadCommandePdf,
-    getCommandesByUser
+    getCommandesByUser,
+    cancelCommande
 } from '../controllers/CommandeController.js';
 
 const router = express.Router();
@@ -26,7 +27,8 @@ router.get('/commande/countcmd-delivred', getAllDeliveredCmd); // Create a new c
 router.get('/commande/countcmd-pending', getAllPendingCmd); // Create a new commande
 router.get('/commande/countcmd-sum', sumDeliveredCmd); // Create a new commande
 router.get('/mycommandes/:userId', getCommandesByUser); // Create a new commande
-
+router.get('/commandes', getAllCommandes); // Get all commandes
+router.put('/cancel/:id', cancelCommande);
 router.get('/commandes', getAllCommandes); // Get all commandes
 router.get('/commande-pdf/:id', downloadCommandePdf); // Get all commandes
 router.get('/commande/:id', getCommandeById); // Get a specific commande
