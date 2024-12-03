@@ -20,20 +20,17 @@ const app = express();
 const PORT = process.env.PORT || 9090;
 
 // Specifying the MongoDB database name
-const databaseName = process.env.MONGODB_DB_NAME || 'steelisiaDB'; // Use env variable for flexibility
+const databaseName = 'steelisiaDB'; // Use env variable for flexibility
 
 // Enabling debug mode for mongoose
 mongoose.set("debug", true);
 
 // MongoDB connection URL from environment variables for security
-const mongoUri = process.env.MONGODB_URI || `mongodb://127.0.0.1:27017/${databaseName}`;
+const mongoUri = process.env.MONGO_URI || `mongodb://127.0.0.1:27017/${databaseName}`;
 
 // Connecting to the MongoDB database
 mongoose
-  .connect(mongoUri, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+  .connect(mongoUri)
   .then(() => {
     console.log(`Connected to MongoDB database: ${databaseName}`);
   })
@@ -41,6 +38,7 @@ mongoose
     console.error("MongoDB connection error:", error);
     process.exit(1); // Exit process on DB connection failure
   });
+
 
 // Middleware
 app.use(
