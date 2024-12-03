@@ -26,11 +26,14 @@ const databaseName = 'steelisiaDB'; // Use env variable for flexibility
 mongoose.set("debug", true);
 
 // MongoDB connection URL from environment variables for security
-const mongoUri = process.env.MONGO_URI || `mongodb://127.0.0.1:27017/${databaseName}`;
+const mongoUri = `mongodb+srv://SteelisiaDB:cvkUlR8YrDgHLtxc@cluster0.mslhj.mongodb.net/${databaseName}?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Connecting to the MongoDB database
 mongoose
-  .connect(mongoUri)
+  .connect(mongoUri, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
   .then(() => {
     console.log(`Connected to MongoDB database: ${databaseName}`);
   })
@@ -38,7 +41,6 @@ mongoose
     console.error("MongoDB connection error:", error);
     process.exit(1); // Exit process on DB connection failure
   });
-
 
 // Middleware
 app.use(
@@ -71,3 +73,5 @@ app.use(errorHandler);
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+
+
