@@ -115,10 +115,15 @@ export function addOnce(req, res) {
         return res.status(400).json({ errors: errors.array() });
     }
 
-    // Check if the images files were uploaded
+    // Check if the image files were uploaded
     if (!req.files || req.files.length === 0) {
         return res.status(400).json({ error: "At least one image file is required" });
     }
+
+    // Convert the images to base64 format
+    const imagesBase64 = req.files.map(file => {
+        return `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+    });
 
     // Prepare the product data for creation
     const productData = {
@@ -127,12 +132,11 @@ export function addOnce(req, res) {
         prix: req.body.prix,
         etat: req.body.etat,
         qnt: req.body.qnt,
-        images: req.files.map(file => file.filename), // Map filenames from the uploaded files
+        images: imagesBase64, // Store base64-encoded images in the database
         idCategorie: req.body.idCategorie,
         sousCategorie: req.body.sousCategorie,
-
     };
-    
+
     Product.create(productData)
         .then((newProduct) => {
             res.status(201).json(newProduct); // Return the newly created product
