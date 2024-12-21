@@ -1,4 +1,5 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
+
 const { Schema, model } = mongoose;
 
 const productSchema = new Schema({
@@ -27,7 +28,7 @@ const productSchema = new Schema({
         type: String,
         required: true,
     },
-    images: [{ // Change to an array of base64-encoded strings
+    images: [{ // Change to an array for multiple images
         type: String,
         required: true,
     }],
@@ -44,4 +45,5 @@ const productSchema = new Schema({
     timestamps: true,
 });
 
+// Creating and exporting the 'Product' model using the defined schema
 export default model('Product', productSchema);

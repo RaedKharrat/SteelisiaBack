@@ -1,7 +1,6 @@
-import multer from "multer";
+import multer, { diskStorage } from "multer";
+import { join, dirname } from "path";
 import { fileURLToPath } from "url";
-import { dirname } from "path";
-import fs from "fs";
 
 // MIME types for supported image formats
 const MIME_TYPES = {
@@ -10,8 +9,17 @@ const MIME_TYPES = {
     "image/png": "png",
 };
 
-// Configure storage
-const storage = multer.memoryStorage(); // Use memory storage to store images as buffer
+// Configuring multer storage and file handling
+const storage = diskStorage({
+    destination: (req, file, callback) => {
+        const __dirname = dirname(fileURLToPath(import.meta.url));
+        callback(null, join(__dirname, "../public/images"));
+    },
+    filename: (req, file, callback) => {
+        const extension = MIME_TYPES[file.mimetype];
+        callback(null, Date.now() + "." + extension);
+    },
+});
 
 const fileFilter = (req, file, callback) => {
     if (!MIME_TYPES[file.mimetype]) {
@@ -23,6 +31,8 @@ const fileFilter = (req, file, callback) => {
 
 export default multer({
     storage,
-    limits: { fileSize: 2048 * 2048 }, // Limit to 2MB per image
+    limits: { fileSize: 2048 * 1024 }, // Limit to 512KB
     fileFilter,
-}).array("images", 10); // Change to array to accept multiple files
+}).array("images", 10); // Change to array to accept multiple files (up to 10 in this case)
+
+
