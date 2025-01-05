@@ -4,37 +4,28 @@ import Product from "../models/Product.js";
 import { JSDOM } from "jsdom"; // Use to generate HTML content
 import inlineCss from "inline-css"; // To inline CSS for PDF rendering
 import mongoose from 'mongoose';  // Import mongoose
+import stripePackage from 'stripe';
 
-
-// Create a new commande (order)
-
-
-
-
-// Create a new commande (order)
-
+// Initialize Stripe with your secret key
+// Start of Selection
 export const createCommande = async (req, res) => {
-    const { userId, products } = req.body;
+    const { userId, products, adressLiv, note } = req.body;
 
-    // Validation for missing fields
-    if (!userId || !products || !Array.isArray(products) || products.length === 0) {
-        return res.status(400).json({ error: 'Missing required fields: userId or products' });
+    if (!userId || !products || !Array.isArray(products) || products.length === 0 || !adressLiv || !note) {
+        return res.status(400).json({ error: 'Missing required fields: userId, products, adressLiv, or note' });
     }
 
     try {
         let totalAmount = 0;
         const productsDetails = [];
 
-        // Fetch all the products at once to reduce database queries
-        const productIds = products.map(item => new mongoose.Types.ObjectId(item.productId)); // Using `new` keyword to create ObjectId
+        const productIds = products.map(item => new mongoose.Types.ObjectId(item.productId));
         const foundProducts = await Product.find({ _id: { $in: productIds } });
 
-        // Check if all products are found
         if (foundProducts.length !== products.length) {
             return res.status(404).json({ error: 'One or more products not found.' });
         }
 
-        // Calculate the total price of the order
         for (const item of products) {
             const product = foundProducts.find(p => p._id.toString() === item.productId);
             if (!product) {
@@ -45,23 +36,25 @@ export const createCommande = async (req, res) => {
             productsDetails.push({
                 productId: item.productId,
                 quantity: item.quantity,
-                totalPrice: totalPrice
+                totalPrice,
             });
         }
 
-        // Create the new order (commande)
         const newCommande = new Commande({
             userId,
             products: productsDetails,
             totalAmount,
+            adressLiv,
+            note,
         });
 
         await newCommande.save();
-        res.status(201).json(newCommande); // Return the newly created commande
+        res.status(201).json(newCommande);
     } catch (err) {
         res.status(500).json({ error: 'Error creating commande: ' + err.message });
     }
 };
+
 
 // Get all commandes for a specific user
 export const getCommandesByUser = async (req, res) => {

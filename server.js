@@ -55,7 +55,7 @@ app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 
 // Serving static files (images) from the 'public/images' directory
-app.use("/images", express.static("public/images"));
+app.use("/images", express.static(path.join(__dirname, "public/images")));
 
 // Importing the routes
 app.use("/product", ProductRoutes);

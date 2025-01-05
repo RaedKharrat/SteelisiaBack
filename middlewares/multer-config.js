@@ -36,3 +36,35 @@ export default multer({
 }).array("images", 10); // Change to array to accept multiple files (up to 10 in this case)
 
 
+// multer-config.js
+
+// import multer from 'multer';
+// import { memoryStorage } from 'multer';
+
+// // Define MIME types
+// const MIME_TYPES = {
+//     'image/jpg': 'jpg',
+//     'image/jpeg': 'jpg',
+//     'image/png': 'png',
+// };
+
+// // Configure multer storage to handle memory storage
+// const storage = memoryStorage();
+
+// // File filter for supported image types
+// const fileFilter = (req, file, callback) => {
+//     if (!MIME_TYPES[file.mimetype]) {
+//         callback(new Error('Unsupported file type'), false);
+//     } else {
+//         callback(null, true);
+//     }
+// };
+
+// // Export the multer configuration as default
+// const upload = multer({
+//     storage,
+//     limits: { fileSize: 2048 * 1024 }, // Limit to 2MB
+//     fileFilter,
+// }).array('images', 10); // Handling multiple file uploads (up to 10 files)
+
+// export default upload;

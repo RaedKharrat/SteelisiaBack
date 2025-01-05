@@ -33,6 +33,18 @@ const commandeSchema = new Schema({
         type: Number,
         required: true,
     },
+    adressLiv: {
+        type: String,
+        required: false,
+    },
+    note: {
+        type: String,
+        required: false,
+    },
+    payedAmount: {
+        type: Number,
+        required: false,
+    },
 }, {
     timestamps: true, // Automatically adds createdAt and updatedAt fields
 });

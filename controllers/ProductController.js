@@ -127,13 +127,17 @@ export function addOnce(req, res) {
         prix: req.body.prix,
         etat: req.body.etat,
         qnt: req.body.qnt,
-        images: req.files.map(file => file.filename), // Map filenames from the uploaded files
+        images: req.files.map(file => file.filename), 
         idCategorie: req.body.idCategorie,
         sousCategorie: req.body.sousCategorie,
 
     };
-    
-    Product.create(productData)
+      // Optionally, append full image paths (to be used when sending response)
+      const fullProductData = {
+        ...productData,
+        images: productData.images.map(filename => `/images/${filename}`), // Add full path for images
+    };
+    Product.create(fullProductData)
         .then((newProduct) => {
             res.status(201).json(newProduct); // Return the newly created product
         })
@@ -158,6 +162,8 @@ export function updateOnce(req, res) {
         qnt: req.body.qnt,
         idCategorie: req.body.idCategorie,
         sousCategorie: req.body.sousCategorie,
+        images: req.files.map(file => file.filename), 
+
 
     };
 
@@ -177,6 +183,117 @@ export function updateOnce(req, res) {
             res.status(500).json({ error: 'Error updating product: ' + err.message });
         });
 }
+
+// export function addOnce(req, res) {
+//     const errors = validationResult(req);
+//     if (!errors.isEmpty()) {
+//         return res.status(400).json({ errors: errors.array() });
+//     }
+
+//     if (!req.files || req.files.length === 0) {
+//         return res.status(400).json({ error: 'At least one image file is required' });
+//     }
+
+//     const productData = {
+//         name: req.body.name,
+//         description: req.body.description,
+//         prix: req.body.prix,
+//         etat: req.body.etat,
+//         qnt: req.body.qnt,
+//         images: [],  // Array to hold the image URLs
+//         idCategorie: req.body.idCategorie,
+//         sousCategorie: req.body.sousCategorie,
+//     };
+
+//     // Upload files to Firebase Storage
+//     const uploadPromises = req.files.map(file => {
+//         const fileName = Date.now() + '.' + file.originalname.split('.').pop();  // Creating a unique file name
+//         const fileBuffer = file.buffer;
+
+//         const fileUpload = bucket.file(fileName).save(fileBuffer, {
+//             metadata: { contentType: file.mimetype },
+//         });
+
+//         return fileUpload.then(() => {
+//             const fileUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+//             productData.images.push(fileUrl);  // Store the file URL in the product data
+//         });
+//     });
+
+//     // After all files are uploaded, create the product
+//     Promise.all(uploadPromises)
+//         .then(() => {
+//             return Product.create(productData);
+//         })
+//         .then((newProduct) => {
+//             res.status(201).json(newProduct);
+//         })
+//         .catch((err) => {
+//             res.status(500).json({ error: 'Error uploading images or creating product: ' + err.message });
+//         });
+// }
+
+// // Controller function to update a product by ID
+// export function updateOnce(req, res) {
+//     const errors = validationResult(req);
+//     if (!errors.isEmpty()) {
+//         return res.status(400).json({ errors: errors.array() });
+//     }
+
+//     const updateData = {
+//         name: req.body.name,
+//         description: req.body.description,
+//         prix: req.body.prix,
+//         etat: req.body.etat,
+//         qnt: req.body.qnt,
+//         idCategorie: req.body.idCategorie,
+//         sousCategorie: req.body.sousCategorie,
+//     };
+
+//     if (req.files && req.files.length > 0) {
+//         // Upload new images to Firebase
+//         const uploadPromises = req.files.map(file => {
+//             const fileName = Date.now() + '.' + file.originalname.split('.').pop();
+//             const fileBuffer = file.buffer;
+
+//             return bucket.file(fileName).save(fileBuffer, {
+//                 metadata: { contentType: file.mimetype },
+//             }).then(() => {
+//                 const fileUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+//                 return fileUrl;
+//             });
+//         });
+
+//         // After uploading images, update the product
+//         Promise.all(uploadPromises)
+//             .then((uploadedImages) => {
+//                 updateData.images = uploadedImages;  // Add the URLs of new images to the product data
+//                 return Product.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
+//             })
+//             .then((updatedProduct) => {
+//                 if (!updatedProduct) {
+//                     return res.status(404).json({ message: 'Product not found' });
+//                 }
+//                 res.json(updatedProduct);
+//             })
+//             .catch((err) => {
+//                 res.status(500).json({ error: 'Error updating product: ' + err.message });
+//             });
+//     } else {
+//         // If no new images are uploaded, just update other fields
+//         Product.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true })
+//             .then((updatedProduct) => {
+//                 if (!updatedProduct) {
+//                     return res.status(404).json({ message: 'Product not found' });
+//                 }
+//                 res.json(updatedProduct);
+//             })
+//             .catch((err) => {
+//                 res.status(500).json({ error: 'Error updating product: ' + err.message });
+//             });
+//     }
+// }
+
 
 // Controller function to get all products with category details
 export function getAll(req, res) {
