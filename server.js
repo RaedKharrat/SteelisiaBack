@@ -45,7 +45,7 @@ mongoose
 // Middleware
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000", // Dynamically load frontend URL from env
+    origin: process.env.FRONTEND_URL || "https://steelisia.tn", // Dynamically load frontend URL from env
     credentials: true, // Allow credentials (cookies) to be sent
   })
 );
