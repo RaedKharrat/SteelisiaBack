@@ -9,6 +9,8 @@ import UserRoutes from "./routes/UserRouter.js";
 import CommandeRoutes from "./routes/CommandeRouter.js";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
+import path from 'path';
+import { fileURLToPath } from 'url'
 
 // Load environment variables
 dotenv.config();
@@ -55,8 +57,9 @@ app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 
 // Serving static files (images) from the 'public/images' directory
-app.use("/images", express.static(path.join(__dirname, "public/images")));
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+app.use("/images", express.static(path.join(__dirname, "public/images")));
 // Importing the routes
 app.use("/product", ProductRoutes);
 app.use("/categorie", CategorieRoutes);
