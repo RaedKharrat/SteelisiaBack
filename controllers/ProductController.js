@@ -3,6 +3,9 @@ import Product from '../models/Product.js';
 import fs from 'fs';
 import path from 'path';
 import multer from 'multer';
+import simpleGit from 'simple-git'; // Import simple-git
+
+const git = simpleGit(); // Initialize simple-git
 
 // Configure multer for PDF file uploads
 const pdfStorage = multer.diskStorage({
@@ -130,16 +133,27 @@ export function addOnce(req, res) {
         images: req.files.map(file => file.filename), 
         idCategorie: req.body.idCategorie,
         sousCategorie: req.body.sousCategorie,
-
     };
-      // Optionally, append full image paths (to be used when sending response)
-      const fullProductData = {
+
+    // Optionally, append full image paths (to be used when sending response)
+    const fullProductData = {
         ...productData,
         images: productData.images.map(filename => `/images/${filename}`), // Add full path for images
     };
+
     Product.create(fullProductData)
         .then((newProduct) => {
-            res.status(201).json(newProduct); // Return the newly created product
+            // Commit and push changes to GitHub
+            git.add('.')
+                .commit(`Added new product: ${newProduct.name}`)
+                .push('origin', 'master', (err) => {
+                    if (err) {
+                        console.error('Error pushing to GitHub:', err);
+                        return res.status(500).json({ error: 'Error pushing to GitHub: ' + err.message });
+                    }
+                    console.log('Changes pushed to GitHub successfully');
+                    res.status(201).json(newProduct); // Return the newly created product
+                });
         })
         .catch((err) => {
             res.status(500).json({ error: 'Error creating product: ' + err.message });

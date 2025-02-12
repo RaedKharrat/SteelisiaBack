@@ -1,34 +1,51 @@
 import PDFDocument from 'pdfkit';
 import Commande from "../models/Commande.js";
 import Product from "../models/Product.js";
-import { JSDOM } from "jsdom"; // Use to generate HTML content
-import inlineCss from "inline-css"; // To inline CSS for PDF rendering
-import mongoose from 'mongoose';  // Import mongoose
-import stripePackage from 'stripe';
+import mongoose from 'mongoose';  
+import axios from 'axios';
+import dotenv from 'dotenv';
 
-// Initialize Stripe with your secret key
-// Start of Selection
+dotenv.config();
+
 export const createCommande = async (req, res) => {
-    const { userId, products, adressLiv, note } = req.body;
+    console.log("Received request to create a commande:", req.body);
+
+    const { userId, products, adressLiv, note, firstName, lastName, phoneNumber, email, paymentPercentage } = req.body;
 
     if (!userId || !products || !Array.isArray(products) || products.length === 0 || !adressLiv || !note) {
+        console.error("Missing required fields:", { userId, products, adressLiv, note });
         return res.status(400).json({ error: 'Missing required fields: userId, products, adressLiv, or note' });
+    }
+
+    // Validate payment percentage (Only allow 30%, 50%, or 100%)
+    const allowedPercentages = [30, 50, 100];
+    if (!allowedPercentages.includes(paymentPercentage)) {
+        console.error("Invalid payment percentage:", paymentPercentage);
+        return res.status(400).json({ error: 'Invalid payment percentage. Choose 30%, 50%, or 100%.' });
     }
 
     try {
         let totalAmount = 0;
         const productsDetails = [];
 
+        // Convert product IDs to Mongoose ObjectId
         const productIds = products.map(item => new mongoose.Types.ObjectId(item.productId));
+        console.log("Converted product IDs:", productIds);
+
+        // Fetch products from the database
         const foundProducts = await Product.find({ _id: { $in: productIds } });
+        console.log("Found products from DB:", foundProducts);
 
         if (foundProducts.length !== products.length) {
+            console.error("One or more products not found.");
             return res.status(404).json({ error: 'One or more products not found.' });
         }
 
+        // Calculate total price
         for (const item of products) {
             const product = foundProducts.find(p => p._id.toString() === item.productId);
             if (!product) {
+                console.error(`Product with ID ${item.productId} not found.`);
                 return res.status(404).json({ error: `Product with ID ${item.productId} not found.` });
             }
             const totalPrice = product.prix * item.quantity;
@@ -40,20 +57,98 @@ export const createCommande = async (req, res) => {
             });
         }
 
+        console.log("Total amount calculated:", totalAmount);
+
+        // Calculate the amount to pay based on the selected percentage
+        const amountToPay = (totalAmount * paymentPercentage) / 100;
+        console.log(`Amount to pay (${paymentPercentage}% of ${totalAmount}):`, amountToPay);
+
+        // Create a new Commande
         const newCommande = new Commande({
             userId,
             products: productsDetails,
             totalAmount,
             adressLiv,
             note,
+            paymentStatus: "pending", // Add payment status tracking
         });
 
         await newCommande.save();
-        res.status(201).json(newCommande);
+        console.log("Commande saved successfully:", newCommande);
+
+        // Konnect API Payment
+        const orderId = newCommande._id.toString();
+        const currency = "TND"; // Adjust as needed
+
+        // Check if environment variables are correctly set
+        console.log("Konnect Wallet ID:", process.env.KONNECT_WALLET_ID);
+        console.log("Konnect API Key:", process.env.KONNECT_API_KEY);
+
+        if (!process.env.KONNECT_WALLET_ID || !process.env.KONNECT_API_KEY) {
+            console.error("Missing Konnect API credentials.");
+            return res.status(500).json({ error: "Konnect API credentials are missing in environment variables." });
+        }
+
+        // Debug request payload and headers
+        const requestPayload = {
+            receiverWalletId: process.env.KONNECT_WALLET_ID,
+            token: currency,
+            amount: amountToPay,
+            type: "immediate",
+            description: `Payment (${paymentPercentage}%) for order ` + orderId,
+            acceptedPaymentMethods: ["wallet", "bank_card", "e-DINAR"],
+            lifespan: 10,
+            checkoutForm: true,
+            addPaymentFeesToAmount: true,
+            firstName,
+            lastName,
+            phoneNumber,
+            email,
+            webhook: "https://yourdomain.com/webhook",
+            silentWebhook: true,
+            successUrl: "https://yourdomain.com/success",
+            failUrl: "https://yourdomain.com/failure",
+            theme: "dark"
+        };
+
+        console.log("Request Payload:", requestPayload);
+        console.log("Request Headers:", {
+            'x-api-key': process.env.KONNECT_API_KEY,
+            'Content-Type': 'application/json'
+        });
+
+        // Make the API request
+        const response = await axios.post('https://api.preprod.konnect.network/api/v2/payments/init-payment', requestPayload, {
+            headers: {
+                'x-api-key': process.env.KONNECT_API_KEY,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        console.log("Konnect API Response:", response.data);
+
+        if (!response.data.payment_url) {
+            console.error("Payment URL missing from Konnect API response.");
+            return res.status(500).json({ error: "Failed to retrieve payment link from Konnect API." });
+        }
+
+        res.status(201).json({
+            message: `Commande created successfully. You are paying ${paymentPercentage}% of the total amount.`,
+            totalAmount,
+            amountToPay,
+            commande: newCommande,
+            paymentLink: response.data.payment_url
+        });
+
     } catch (err) {
+        console.error("Error creating commande:", err);
+        if (err.response) {
+            console.error("Konnect API Error Response:", err.response.data);
+        }
         res.status(500).json({ error: 'Error creating commande: ' + err.message });
     }
 };
+
 
 
 // Get all commandes for a specific user
