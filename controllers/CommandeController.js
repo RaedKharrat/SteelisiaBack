@@ -34,7 +34,6 @@ export const createCommande = async (req, res) => {
 
         // Fetch products from the database
         const foundProducts = await Product.find({ _id: { $in: productIds } });
-        console.log("Found products from DB:", foundProducts);
 
         if (foundProducts.length !== products.length) {
             console.error("One or more products not found.");
@@ -106,8 +105,8 @@ export const createCommande = async (req, res) => {
             email,
             webhook: "https://yourdomain.com/webhook",
             silentWebhook: true,
-            successUrl: "https://yourdomain.com/success",
-            failUrl: "https://yourdomain.com/failure",
+            successUrl: "https://steelisia.tn/success-payment",
+            failUrl: "https://steelisia.tn/echec-payment",
             theme: "dark"
         };
 
