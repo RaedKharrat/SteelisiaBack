@@ -3,9 +3,11 @@ import Product from '../models/Product.js';
 import fs from 'fs';
 import path from 'path';
 import multer from 'multer';
-import simpleGit from 'simple-git'; // Import simple-git
+import cloudinary from '../middlewares/cloudinaryConfig.js';
+import dotenv from 'dotenv';
 
-const git = simpleGit(); // Initialize simple-git
+dotenv.config();
+
 
 // Configure multer for PDF file uploads
 const pdfStorage = multer.diskStorage({
@@ -112,190 +114,106 @@ export const downloadLatestPDF = (req, res) => {
     });
 };
 // Controller function to create a new product
-export function addOnce(req, res) {
+export async function addOnce(req, res) {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
     }
 
-    // Check if the images files were uploaded
     if (!req.files || req.files.length === 0) {
         return res.status(400).json({ error: "At least one image file is required" });
     }
 
-    // Prepare the product data for creation
-    const productData = {
-        name: req.body.name,
-        description: req.body.description,
-        prix: req.body.prix,
-        etat: req.body.etat,
-        qnt: req.body.qnt,
-        images: req.files.map(file => file.filename), 
-        idCategorie: req.body.idCategorie,
-        sousCategorie: req.body.sousCategorie,
+    console.log('Cloudinary Config:', {
+        cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+        api_key: process.env.CLOUDINARY_API_KEY,
+        api_secret: process.env.CLOUDINARY_API_SECRET,
+    });
 
-    };
-      // Optionally, append full image paths (to be used when sending response)
-      const fullProductData = {
-        ...productData,
-        images: productData.images.map(filename => `/images/${filename}`), // Add full path for images
-    };
-    Product.create(fullProductData)
-        .then((newProduct) => {
-            res.status(201).json(newProduct); // Return the newly created product
-        })
-        .catch((err) => {
-            res.status(500).json({ error: 'Error creating product: ' + err.message });
+    try {
+        console.log('Files received:', req.files);
+
+        // Upload images to Cloudinary
+        const uploadPromises = req.files.map(file => {
+            console.log('Uploading file:', file.originalname);
+            return cloudinary.uploader.upload(`data:${file.mimetype};base64,${file.buffer.toString('base64')}`, {
+                folder: 'products',
+                api_key: process.env.CLOUDINARY_API_KEY, // Explicitly pass api_key
+                api_secret: process.env.CLOUDINARY_API_SECRET, // Explicitly pass api_secret
+                cloud_name: process.env.CLOUDINARY_CLOUD_NAME, // Explicitly pass cloud_name
+            });
         });
+
+        const uploadResults = await Promise.all(uploadPromises);
+        console.log('Upload results:', uploadResults);
+
+        const imageUrls = uploadResults.map(result => result.secure_url);
+        console.log('Image URLs:', imageUrls);
+
+        // Prepare the product data for creation
+        const productData = {
+            name: req.body.name,
+            description: req.body.description,
+            prix: req.body.prix,
+            etat: req.body.etat,
+            qnt: req.body.qnt,
+            images: imageUrls,
+            idCategorie: req.body.idCategorie,
+            sousCategorie: req.body.sousCategorie,
+        };
+
+        const newProduct = await Product.create(productData);
+        res.status(201).json(newProduct);
+    } catch (err) {
+        console.error('Error in addOnce:', err);
+        res.status(500).json({ error: 'Error creating product: ' + err.message });
+    }
 }
 
-// Controller function to update a product by ID
-export function updateOnce(req, res) {
+export async function updateOnce(req, res) {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
     }
 
-    // Prepare the update data
-    const updateData = {
-        name: req.body.name,
-        description: req.body.description,
-        prix: req.body.prix,
-        etat: req.body.etat,
-        qnt: req.body.qnt,
-        idCategorie: req.body.idCategorie,
-        sousCategorie: req.body.sousCategorie,
-        images: req.files.map(file => file.filename), 
+    try {
+        const updateData = {
+            name: req.body.name,
+            description: req.body.description,
+            prix: req.body.prix,
+            etat: req.body.etat,
+            qnt: req.body.qnt,
+            idCategorie: req.body.idCategorie,
+            sousCategorie: req.body.sousCategorie,
+        };
 
+        // If new images are uploaded, upload them to Cloudinary
+        if (req.files && req.files.length > 0) {
+            const uploadPromises = req.files.map(file => {
+                return cloudinary.uploader.upload(`data:${file.mimetype};base64,${file.buffer.toString('base64')}`, {
+                    folder: 'products',
+                    api_key: process.env.CLOUDINARY_API_KEY, // Explicitly pass api_key
+                    api_secret: process.env.CLOUDINARY_API_SECRET, // Explicitly pass api_secret
+                    cloud_name: process.env.CLOUDINARY_CLOUD_NAME, // Explicitly pass cloud_name
+                });
+            });
 
-    };
+            const uploadResults = await Promise.all(uploadPromises);
+            updateData.images = uploadResults.map(result => result.secure_url);
+        }
 
-    // Handle the images if provided
-    if (req.files && req.files.length > 0) {
-        updateData.images = req.files.map(file => file.filename); // Update images with new filenames
+        // Update the product in the database
+        const updatedProduct = await Product.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
+        if (!updatedProduct) {
+            return res.status(404).json({ message: 'Product not found' });
+        }
+
+        res.json(updatedProduct);
+    } catch (err) {
+        console.error('Error in updateOnce:', err);
+        res.status(500).json({ error: 'Error updating product: ' + err.message });
     }
-
-    Product.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true })
-        .then((updatedProduct) => {
-            if (!updatedProduct) {
-                return res.status(404).json({ message: 'Product not found' });
-            }
-            res.json(updatedProduct); // Return the updated product
-        })
-        .catch((err) => {
-            res.status(500).json({ error: 'Error updating product: ' + err.message });
-        });
 }
-
-// export function addOnce(req, res) {
-//     const errors = validationResult(req);
-//     if (!errors.isEmpty()) {
-//         return res.status(400).json({ errors: errors.array() });
-//     }
-
-//     if (!req.files || req.files.length === 0) {
-//         return res.status(400).json({ error: 'At least one image file is required' });
-//     }
-
-//     const productData = {
-//         name: req.body.name,
-//         description: req.body.description,
-//         prix: req.body.prix,
-//         etat: req.body.etat,
-//         qnt: req.body.qnt,
-//         images: [],  // Array to hold the image URLs
-//         idCategorie: req.body.idCategorie,
-//         sousCategorie: req.body.sousCategorie,
-//     };
-
-//     // Upload files to Firebase Storage
-//     const uploadPromises = req.files.map(file => {
-//         const fileName = Date.now() + '.' + file.originalname.split('.').pop();  // Creating a unique file name
-//         const fileBuffer = file.buffer;
-
-//         const fileUpload = bucket.file(fileName).save(fileBuffer, {
-//             metadata: { contentType: file.mimetype },
-//         });
-
-//         return fileUpload.then(() => {
-//             const fileUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
-//             productData.images.push(fileUrl);  // Store the file URL in the product data
-//         });
-//     });
-
-//     // After all files are uploaded, create the product
-//     Promise.all(uploadPromises)
-//         .then(() => {
-//             return Product.create(productData);
-//         })
-//         .then((newProduct) => {
-//             res.status(201).json(newProduct);
-//         })
-//         .catch((err) => {
-//             res.status(500).json({ error: 'Error uploading images or creating product: ' + err.message });
-//         });
-// }
-
-// // Controller function to update a product by ID
-// export function updateOnce(req, res) {
-//     const errors = validationResult(req);
-//     if (!errors.isEmpty()) {
-//         return res.status(400).json({ errors: errors.array() });
-//     }
-
-//     const updateData = {
-//         name: req.body.name,
-//         description: req.body.description,
-//         prix: req.body.prix,
-//         etat: req.body.etat,
-//         qnt: req.body.qnt,
-//         idCategorie: req.body.idCategorie,
-//         sousCategorie: req.body.sousCategorie,
-//     };
-
-//     if (req.files && req.files.length > 0) {
-//         // Upload new images to Firebase
-//         const uploadPromises = req.files.map(file => {
-//             const fileName = Date.now() + '.' + file.originalname.split('.').pop();
-//             const fileBuffer = file.buffer;
-
-//             return bucket.file(fileName).save(fileBuffer, {
-//                 metadata: { contentType: file.mimetype },
-//             }).then(() => {
-//                 const fileUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
-//                 return fileUrl;
-//             });
-//         });
-
-//         // After uploading images, update the product
-//         Promise.all(uploadPromises)
-//             .then((uploadedImages) => {
-//                 updateData.images = uploadedImages;  // Add the URLs of new images to the product data
-//                 return Product.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true });
-//             })
-//             .then((updatedProduct) => {
-//                 if (!updatedProduct) {
-//                     return res.status(404).json({ message: 'Product not found' });
-//                 }
-//                 res.json(updatedProduct);
-//             })
-//             .catch((err) => {
-//                 res.status(500).json({ error: 'Error updating product: ' + err.message });
-//             });
-//     } else {
-//         // If no new images are uploaded, just update other fields
-//         Product.findByIdAndUpdate(req.params.id, updateData, { new: true, runValidators: true })
-//             .then((updatedProduct) => {
-//                 if (!updatedProduct) {
-//                     return res.status(404).json({ message: 'Product not found' });
-//                 }
-//                 res.json(updatedProduct);
-//             })
-//             .catch((err) => {
-//                 res.status(500).json({ error: 'Error updating product: ' + err.message });
-//             });
-//     }
-// }
 
 
 // Controller function to get all products with category details

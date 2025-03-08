@@ -11,12 +11,22 @@ import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import path from 'path';
 import { fileURLToPath } from 'url'
+import cloudinary from './middlewares/cloudinaryConfig.js';
 
-// Load environment variables
+
 dotenv.config();
+// Load environment variables
 
 // Creating an express app
 const app = express();
+
+
+console.log('Cloudinary Config:', {
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
 
 // Setting the port number for the server (default to 9090 if not provided)
 const PORT = process.env.PORT || 9090;
@@ -58,6 +68,8 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serving static files (images) from the 'public/images' directory
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+
 
 app.use("/images", express.static(path.join(__dirname, "public/images")));
 // Importing the routes
