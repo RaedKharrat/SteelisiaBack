@@ -7,21 +7,16 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+
 export const createCommande = async (req, res) => {
     console.log("Received request to create a commande:", req.body);
 
-    const { userId, products, adressLiv, note, firstName, lastName, phoneNumber, email, paymentPercentage } = req.body;
+    const { userId, products, adressLiv, note, Fullname, numtel, mail } = req.body;
 
-    if (!userId || !products || !Array.isArray(products) || products.length === 0 || !adressLiv || !note) {
-        console.error("Missing required fields:", { userId, products, adressLiv, note });
-        return res.status(400).json({ error: 'Missing required fields: userId, products, adressLiv, or note' });
-    }
-
-    // Validate payment percentage (Only allow 30%, 50%, or 100%)
-    const allowedPercentages = [30, 50, 100];
-    if (!allowedPercentages.includes(paymentPercentage)) {
-        console.error("Invalid payment percentage:", paymentPercentage);
-        return res.status(400).json({ error: 'Invalid payment percentage. Choose 30%, 50%, or 100%.' });
+    // Validate required fields
+    if (!userId || !products || !Array.isArray(products) || products.length === 0) {
+        console.error("Missing required fields:", { userId, products });
+        return res.status(400).json({ error: 'Missing required fields: userId or products' });
     }
 
     try {
@@ -58,10 +53,6 @@ export const createCommande = async (req, res) => {
 
         console.log("Total amount calculated:", totalAmount);
 
-        // Calculate the amount to pay based on the selected percentage
-        const amountToPay = (totalAmount * paymentPercentage) / 100;
-        console.log(`Amount to pay (${paymentPercentage}% of ${totalAmount}):`, amountToPay);
-
         // Create a new Commande
         const newCommande = new Commande({
             userId,
@@ -69,87 +60,24 @@ export const createCommande = async (req, res) => {
             totalAmount,
             adressLiv,
             note,
-            paymentStatus: "pending", // Add payment status tracking
+            Fullname,
+            numtel,
+            mail
         });
 
         await newCommande.save();
         console.log("Commande saved successfully:", newCommande);
 
-        // Konnect API Payment
-        const orderId = newCommande._id.toString();
-        const currency = "TND"; // Adjust as needed
-
-        // Check if environment variables are correctly set
-        console.log("Konnect Wallet ID:", process.env.KONNECT_WALLET_ID);
-        console.log("Konnect API Key:", process.env.KONNECT_API_KEY);
-
-        if (!process.env.KONNECT_WALLET_ID || !process.env.KONNECT_API_KEY) {
-            console.error("Missing Konnect API credentials.");
-            return res.status(500).json({ error: "Konnect API credentials are missing in environment variables." });
-        }
-
-        // Debug request payload and headers
-        const requestPayload = {
-            receiverWalletId: process.env.KONNECT_WALLET_ID,
-            token: currency,
-            amount: amountToPay,
-            type: "immediate",
-            description: `Payment (${paymentPercentage}%) for order ` + orderId,
-            acceptedPaymentMethods: ["wallet", "bank_card", "e-DINAR"],
-            lifespan: 10,
-            checkoutForm: true,
-            addPaymentFeesToAmount: true,
-            firstName,
-            lastName,
-            phoneNumber,
-            email,
-            orderId,
-            webhook: "https://yourdomain.com/webhook",
-            silentWebhook: true,
-            successUrl: "https://steelisia.tn/success-payment",
-            failUrl: "https://steelisia.tn/echec-payment",
-            theme: "dark"
-        };
-
-        console.log("Request Payload:", requestPayload);
-        console.log("Request Headers:", {
-            'x-api-key': process.env.KONNECT_API_KEY,
-            'Content-Type': 'application/json'
-        });
-
-        // Make the API request
-        const response = await axios.post('https://api.preprod.konnect.network/api/v2/payments/init-payment', requestPayload, {
-            headers: {
-                'x-api-key': process.env.KONNECT_API_KEY,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        console.log("Konnect API Response:", response.data);
-
-        if (!response.data.payment_url) {
-            console.error("Payment URL missing from Konnect API response.");
-            return res.status(500).json({ error: "Failed to retrieve payment link from Konnect API." });
-        }
-
         res.status(201).json({
-            message: `Commande created successfully. You are paying ${paymentPercentage}% of the total amount.`,
-            totalAmount,
-            amountToPay,
+            message: "Commande created successfully.",
             commande: newCommande,
-            paymentLink: response.data.payment_url
         });
 
     } catch (err) {
         console.error("Error creating commande:", err);
-        if (err.response) {
-            console.error("Konnect API Error Response:", err.response.data);
-        }
         res.status(500).json({ error: 'Error creating commande: ' + err.message });
     }
 };
-
-
 
 // Get all commandes for a specific user
 export const getCommandesByUser = async (req, res) => {

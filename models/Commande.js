@@ -40,6 +40,17 @@ const commandeSchema = new Schema({
     note: {
         type: String,
         required: false,
+    },Fullname: {
+        type: String,
+        required: false,
+    },
+    numtel: {
+        type: String,
+        required: false,
+    },
+    mail: {
+        type: String,
+        required: false,
     },
     payedAmount: {
         type: Number,
