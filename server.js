@@ -6,6 +6,7 @@ import { notFoundError, errorHandler } from "./middlewares/error-handler.js";
 import ProductRoutes from "./routes/ProductRouter.js";
 import CategorieRoutes from "./routes/CategorieRouter.js";
 import UserRoutes from "./routes/UserRouter.js";
+import B2bRouter from "./routes/B2bRouter.js";
 import CommandeRoutes from "./routes/CommandeRouter.js";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
@@ -77,6 +78,7 @@ app.use("/product", ProductRoutes);
 app.use("/categorie", CategorieRoutes);
 app.use("/user", UserRoutes);
 app.use("/cmd", CommandeRoutes);
+app.use("/b2b", B2bRouter);
 
 // Custom middleware for handling 404 errors
 app.use(notFoundError);
